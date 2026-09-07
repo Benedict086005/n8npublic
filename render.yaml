@@ -1,0 +1,67 @@
+services:
+  - type: web
+    name: n8n
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    envVars:
+      # ---- Networking / public URL ----
+      # Render injects $PORT for the public listener. n8n listens on N8N_PORT.
+      - key: PORT
+        value: "5678"
+      - key: N8N_PORT
+        value: "5678"
+      - key: N8N_HOST
+        value: "0.0.0.0"
+      - key: N8N_PROTOCOL
+        value: "https"
+      - key: N8N_SECURE_COOKIE
+        value: "true"
+      - key: N8N_EDITOR_BASE_URL
+        sync: false
+      - key: N8N_WEBHOOK_URL
+        sync: false
+
+      # ---- Database: Supabase (PostgreSQL) ----
+      # n8n stores its own workflows/credentials/login here, so they survive
+      # Render free-tier restarts. n8n creates its tables on first startup.
+      # Schema MUST stay "public" (a custom schema triggers an n8n bug).
+      - key: DB_TYPE
+        value: "postgresdb"
+      - key: DB_POSTGRESDB_HOST
+        value: "db.jpgobxctmddzabtdxmlf.supabase.co"
+      - key: DB_POSTGRESDB_PORT
+        value: "5432"
+      - key: DB_POSTGRESDB_DATABASE
+        value: "postgres"
+      - key: DB_POSTGRESDB_USER
+        value: "postgres"
+      - key: DB_POSTGRESDB_PASSWORD
+        sync: false
+      - key: DB_POSTGRESDB_SCHEMA
+        value: "public"
+      - key: DB_POSTGRESDB_SSL_ENABLED
+        value: "true"
+      - key: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
+        value: "false"
+      - key: GENERIC_TIMEZONE
+        value: "UTC"
+
+      # ---- Security / secrets (auto-generated per deployment) ----
+      - key: N8N_ENCRYPTION_KEY
+        generateValue: true
+      - key: N8N_USER_MANAGEMENT_JWT_SECRET
+        generateValue: true
+      - key: N8N_USER_MANAGEMENT_JWT_ENCRYPTION_KEY
+        generateValue: true
+
+      # ---- Reduced footprint / hardening ----
+      - key: N8N_DIAGNOSTICS_ENABLED
+        value: "false"
+      - key: N8N_VERSION_NOTIFICATIONS_ENABLED
+        value: "false"
+
+      # ---- Render platform ----
+      - key: RENDER
+        value: "true"
