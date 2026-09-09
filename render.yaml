@@ -61,7 +61,13 @@ services:
         value: "false"
       - key: N8N_VERSION_NOTIFICATIONS_ENABLED
         value: "false"
+      - key: N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS
+        value: "true"
 
       # ---- Render platform ----
       - key: RENDER
         value: "true"
+
+      # ---- Force IPv4 (Render free tier lacks IPv6 support) ----
+      - key: NODE_OPTIONS
+        value: "--dns-result-order=ipv4first"
