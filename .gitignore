@@ -1,0 +1,10 @@
+# Secrets — never commit the real .env
+.env
+.env.*
+!.env.example
+
+# Local n8n data (should live in Supabase, not the repo)
+.n8n/
+
+# OS / editor noise
+.DS_Store

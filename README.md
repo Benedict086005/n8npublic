@@ -27,19 +27,20 @@ If you move to a paid plan with more RAM (e.g. 1–2 GB), you can bump `Dockerfi
 |------|---------|
 | `Dockerfile` | Official n8n 1.x image (memory-tuned); DB configured via env vars in `render.yaml`. |
 | `render.yaml` | Render Blueprint: single `runtime: docker` web service, free plan, `/healthz` check, Supabase Postgres env vars, secrets. |
+| `.env.example` | Template of every env var n8n needs — reference for setting them on Render. |
 | `.dockerignore` | Keeps the build context small / avoids shipping junk. |
 
 ## One-click deploy
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=<YOUR_GITHUB_REPO>)
 
-1. Push this repo (branch `option2`).
+1. Push this repo (branch `victoraro`).
 2. In Render Dashboard → **New → Blueprint**, select the repo + branch, or use the
    Blueprint URL. Render reads `render.yaml`.
-3. The `sync: false` env vars (`N8N_EDITOR_BASE_URL`, `N8N_WEBHOOK_URL`) must be set
-   after the service is created — or fill them in the Blueprint edit screen:
-   - `N8N_EDITOR_BASE_URL=https://<your-service>.onrender.com`
-   - `N8N_WEBHOOK_URL=https://<your-service>.onrender.com`
+3. After creation, set the `sync: false` secrets in the Environment tab:
+   - `DB_POSTGRESDB_PASSWORD` — your Supabase database password
+   - `N8N_EDITOR_BASE_URL` — `https://<your-service>.onrender.com`
+   - `N8N_WEBHOOK_URL` — `https://<your-service>.onrender.com`
 4. First visit to `https://<your-service>.onrender.com` → create the owner account.
 
 ## Manual deploy (alternative)
@@ -50,26 +51,34 @@ Point Render's "Web Service" at the repo with:
 - **Health Check Path:** `/healthz`
 - **Plan:** Free
 
-And set the environment variables from `render.yaml`.
+Then set the environment variables from `.env.example` (see below).
+
+## Setting env vars on Render
+
+Copy the values from [`.env.example`](./.env.example) into your service's
+**Environment** tab on Render, replacing the placeholders. The DB variables must point
+at a **Supabase Transaction Pooler** (port `6543`) — see the table below.
 
 ## Environment variables
 
-Most are already declared in `render.yaml`. The important ones:
+All defaults are already declared in `render.yaml` (or in `.env.example` for manual
+deploys). The important ones:
 
 | Variable | Value | Notes |
 |----------|-------|-------|
 | `PORT` / `N8N_PORT` | `5678` | public + internal listener |
 | `DB_TYPE` | `postgresdb` | n8n stores its own data in Postgres |
-| `DB_POSTGRESDB_HOST` | `db.<ref>.supabase.co` | Supabase direct connection host |
-| `DB_POSTGRESDB_PORT` | `5432` | direct port (`6543` for pooler) |
+| `DB_POSTGRESDB_HOST` | `aws-0-<region>.pooler.supabase.com` | **Transaction Pooler host** (IPv4) |
+| `DB_POSTGRESDB_PORT` | `6543` | **pooler port** (`5432` only if using direct IPv4) |
 | `DB_POSTGRESDB_DATABASE` | `postgres` | database name |
-| `DB_POSTGRESDB_USER` | `postgres` | user (pooler: `postgres.<ref>`) |
+| `DB_POSTGRESDB_USER` | `postgres.<ref>` | pooler user (e.g. `postgres.rkjxpbbsspsaihofrdpe`) |
 | `DB_POSTGRESDB_PASSWORD` | *(your password)* | `sync:false` — set on Render |
 | `DB_POSTGRESDB_SCHEMA` | `public` | **must stay public** (custom schema = n8n bug) |
 | `DB_POSTGRESDB_SSL_ENABLED` | `true` | Supabase requires SSL |
 | `DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED` | `false` | needed for managed/RDS certs |
 | `N8N_EDITOR_BASE_URL` | set to `https://<service>.onrender.com` | `sync:false`, set after deploy |
 | `N8N_WEBHOOK_URL` | set to `https://<service>.onrender.com` | for public webhook URLs |
+| `NODE_OPTIONS` | `--dns-result-order=ipv4first` | **required** — avoids IPv6 `ENETUNREACH` to Supabase |
 | `N8N_ENCRYPTION_KEY` | auto-generated | secrets must stay stable across runs |
 | `N8N_USER_MANAGEMENT_JWT_SECRET` | auto-generated | owner auth |
 | `N8N_USER_MANAGEMENT_JWT_ENCRYPTION_KEY` | auto-generated | owner auth |
@@ -85,33 +94,50 @@ Most are already declared in `render.yaml`. The important ones:
 - Do **not** attach a persistent disk on the free plan — Render rejects it (you don't need one,
   since your DB is external on Supabase).
 
+## Getting the Supabase pooler details
+
+1. Open your Supabase project → **Connect** → **Transaction pooler**.
+2. Copy the connection parameters:
+   - **host:** `aws-0-<region>.pooler.supabase.com`
+   - **port:** `6543`
+   - **user:** `postgres.<your-project-ref>`
+   - **password:** your Supabase database password
+3. Use these for `DB_POSTGRESDB_PORT`, `DB_POSTGRESDB_HOST`, and `DB_POSTGRESDB_USER`.
+
+> ⚠️ **Why the pooler and not direct?** Supabase direct connections resolve to IPv6,
+> but Render's free tier has no IPv6 support → `connect ENETUNREACH` and a crash loop.
+> The Transaction Pooler listens on IPv4, which Render can reach. Also set
+> `NODE_OPTIONS=--dns-result-order=ipv4first` to force Node to prefer IPv4.
+
 ## Local testing
+
+Copy `.env.example` to `.env`, fill in the pooler values, then run:
 
 ```bash
 docker build -t n8n .
 docker run --rm -p 5678:5678 \
+  --env-file .env \
   -e N8N_EDITOR_BASE_URL=http://localhost:5678 \
   -e N8N_WEBHOOK_URL=http://localhost:5678 \
-  -e DB_TYPE=postgresdb \
-  -e DB_POSTGRESDB_HOST=<supabase-host> \
-  -e DB_POSTGRESDB_PORT=5432 \
-  -e DB_POSTGRESDB_DATABASE=postgres \
-  -e DB_POSTGRESDB_USER=postgres \
-  -e DB_POSTGRESDB_PASSWORD=<password> \
-  -e DB_POSTGRESDB_SCHEMA=public \
-  -e DB_POSTGRESDB_SSL_ENABLED=true \
-  -e DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED=false \
   n8n
 # open http://localhost:5678
 ```
 
 ## Troubleshooting
 
+- **`connect ENETUNREACH ... :5432` / crash loop to Supabase:** Supabase direct URLs can
+  resolve to IPv6, which Render free tier can't reach. Switch to the **Transaction Pooler**
+  (host `...pooler.supabase.com`, port `6543`) and set `NODE_OPTIONS=--dns-result-order=ipv4first`.
+- **`duplicate key value violates unique constraint "pg_type_typname_nsp_index"` during
+  migrations:** a migration was interrupted (SIGTERM). Usually transient — redeploy and n8n
+  recovers and continues the migration chain on its own.
+- **"Migrations in progress, please do NOT stop the process":** normal during startup; give
+  the deploy time to finish rather than force-stopping it.
 - **Container exits with "heap out of memory" / code 134:** you're running on n8n 2.x with
   < 1 GB RAM. Use the pinned 1.x image from this repo (or raise RAM on a paid plan).
 - **"Connection terminated"/SSL errors to Supabase:** check `DB_POSTGRESDB_PASSWORD` is set on
   Render, `DB_POSTGRESDB_SSL_ENABLED=true`, and `DB_POSTGRESDB_HOST`/`PORT` match the Supabase
-  **Connect** modal. If using the pooler, port is `6543` and user is `postgres.<ref>`.
+  **Connect → Transaction pooler** modal.
 - **n8n can't read tables / sees duplicates in weird schemas:** ensure `DB_POSTGRESDB_SCHEMA`
   is exactly `public`.
 - **Webhooks returning 404:** make sure `N8N_WEBHOOK_URL` is set to your public

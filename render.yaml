@@ -23,20 +23,21 @@ services:
       - key: N8N_WEBHOOK_URL
         sync: false
 
-      # ---- Database: Supabase (PostgreSQL) ----
+      # ---- Database: Supabase (PostgreSQL) via Transaction Pooler (IPv4) ----
       # n8n stores its own workflows/credentials/login here, so they survive
       # Render free-tier restarts. n8n creates its tables on first startup.
       # Schema MUST stay "public" (a custom schema triggers an n8n bug).
+      # Using pooler (port 6543) instead of direct connection to avoid IPv6 issue.
       - key: DB_TYPE
         value: "postgresdb"
       - key: DB_POSTGRESDB_HOST
-        value: "db.jpgobxctmddzabtdxmlf.supabase.co"
+        value: "aws-0-eu-central-1.pooler.supabase.com"
       - key: DB_POSTGRESDB_PORT
-        value: "5432"
+        value: "6543"
       - key: DB_POSTGRESDB_DATABASE
         value: "postgres"
       - key: DB_POSTGRESDB_USER
-        value: "postgres"
+        value: "postgres.rkjxpbbsspsaihofrdpe"
       - key: DB_POSTGRESDB_PASSWORD
         sync: false
       - key: DB_POSTGRESDB_SCHEMA
