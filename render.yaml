@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: n8n
+    name: n8n-general
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile
@@ -31,13 +31,13 @@ services:
       - key: DB_TYPE
         value: "postgresdb"
       - key: DB_POSTGRESDB_HOST
-        value: "aws-0-eu-central-1.pooler.supabase.com"
+        value: "aws-1-eu-west-1.pooler.supabase.com"
       - key: DB_POSTGRESDB_PORT
         value: "6543"
       - key: DB_POSTGRESDB_DATABASE
         value: "postgres"
       - key: DB_POSTGRESDB_USER
-        value: "postgres.rkjxpbbsspsaihofrdpe"
+        value: "postgres.xodscluqbjhmjdlzjnkz"
       - key: DB_POSTGRESDB_PASSWORD
         sync: false
       - key: DB_POSTGRESDB_SCHEMA
