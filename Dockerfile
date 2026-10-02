@@ -1,15 +1,17 @@
 # n8n self-hosted image — Supabase (Postgres) as its own database.
 #
-# IMPORTANT: pinned to n8n 1.x on purpose. n8n 2.x exceeds Render's free-tier
-# 512MB RAM limit and crashes with "JavaScript heap out of memory" when the
-# editor loads. n8n 1.x runs comfortably (~225MB) under the 512MB cap.
+# NOTE: this branch (general) tracks n8n 2.x. Requires a Render instance with
+# >= 1 GB RAM — n8n 2.x exceeds the free-tier 512MB limit and crashes with
+# "JavaScript heap out of memory" when the editor loads.
+#
+# The victoraro branch keeps n8n 1.x for the free-tier instance.
 #
 # Database: set via environment variables (render.yaml) to point n8n at a
 # Supabase PostgreSQL instance, so workflows, credentials, and the owner
 # login survive Render restarts (unlike the ephemeral SQLite filesystem).
 # n8n auto-creates its required tables on first startup.
 
-FROM n8nio/n8n:1.123.76
+FROM n8nio/n8n:2.41.4
 
 # Base runtime tuning (DB config lives in render.yaml / Render env vars).
 ENV N8N_DIAGNOSTICS_ENABLED=false \
