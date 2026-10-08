@@ -23,39 +23,24 @@ services:
       - key: N8N_WEBHOOK_URL
         sync: false
 
-      # ---- Database: Supabase (PostgreSQL) via Transaction Pooler (IPv4) ----
-      # n8n stores its own workflows/credentials/login here, so they survive
-      # Render free-tier restarts. n8n creates its tables on first startup.
-      # Schema MUST stay "public" (a custom schema triggers an n8n bug).
-      # Using pooler (port 6543) instead of direct connection to avoid IPv6 issue.
-      - key: DB_TYPE
-        value: "postgresdb"
-      - key: DB_POSTGRESDB_HOST
-        value: "aws-1-eu-west-1.pooler.supabase.com"
-      - key: DB_POSTGRESDB_PORT
-        value: "6543"
-      - key: DB_POSTGRESDB_DATABASE
-        value: "postgres"
-      - key: DB_POSTGRESDB_USER
-        value: "postgres.xodscluqbjhmjdlzjnkz"
-      - key: DB_POSTGRESDB_PASSWORD
-        sync: false
-      - key: DB_POSTGRESDB_SCHEMA
-        value: "public"
-      - key: DB_POSTGRESDB_SSL_ENABLED
-        value: "true"
-      - key: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
-        value: "false"
+      # ---- Database: set MANUALLY in Render's Environment tab per instance ----
+      # Each n8n instance MUST get its OWN Supabase project so workflows don't
+      # mix between instances. Do NOT hardcode DB values here — add them manually:
+      #   DB_TYPE=postgresdb
+      #   DB_POSTGRESDB_HOST=aws-0-<region>.pooler.supabase.com
+      #   DB_POSTGRESDB_PORT=6543
+      #   DB_POSTGRESDB_DATABASE=postgres
+      #   DB_POSTGRESDB_USER=postgres.<project-ref>
+      #   DB_POSTGRESDB_PASSWORD=<that project's password>
+      #   DB_POSTGRESDB_SCHEMA=public
+      #   DB_POSTGRESDB_SSL_ENABLED=true
+      #   DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED=false
+      # Also add your 3 secrets (unique per instance — never share across n8ns):
+      #   N8N_ENCRYPTION_KEY=<random 64 hex chars>
+      #   N8N_USER_MANAGEMENT_JWT_SECRET=<random string>
+      #   N8N_USER_MANAGEMENT_JWT_ENCRYPTION_KEY=<random string>
       - key: GENERIC_TIMEZONE
-        value: "UTC"
-
-      # ---- Security / secrets (auto-generated per deployment) ----
-      - key: N8N_ENCRYPTION_KEY
-        generateValue: true
-      - key: N8N_USER_MANAGEMENT_JWT_SECRET
-        generateValue: true
-      - key: N8N_USER_MANAGEMENT_JWT_ENCRYPTION_KEY
-        generateValue: true
+        value: "Africa/Lagos"
 
       # ---- Reduced footprint / hardening ----
       - key: N8N_DIAGNOSTICS_ENABLED
